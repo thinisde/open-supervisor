@@ -3,7 +3,7 @@
  */
 
 export interface NotificationConfig {
-    /** Notification title (default: "OpenCode Orchestrator") */
+    /** Notification title (default: "Agent Supervisor") */
     title?: string;
     /** Notification message (default: "Task completed") */
     message?: string;
@@ -14,4 +14,3 @@ export interface NotificationConfig {
     /** Maximum number of sessions to track before cleanup (default: 100) */
     maxTrackedSessions?: number;
 }
-

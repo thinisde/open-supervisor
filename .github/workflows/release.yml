@@ -89,45 +89,37 @@ jobs:
         with:
           files: binaries/**/*
           body: |
-            # OpenCode Orchestrator ${{ github.ref_name }}
+            # Agent Supervisor ${{ github.ref_name }}
 
-            This release focuses on enhancing autonomous orchestration stability and parallel execution efficiency through HPFA and MSVP.
+            Agent Supervisor is an OpenCode-native multi-agent control plane while preserving the current `opencode-orchestrator` package identity.
 
-            ### Core Updates
-            *   **HPFA (Hyper-Parallel Fractal Architecture)**: Optimized recursive task delegation and concurrency management (up to 50 parallel sessions).
-            *   **MSVP (Multi-Stage Verification Pipeline)**: Improved integration of unit-level shadow reviews and master sync verification.
-            *   **Autonomous Discovery**: Enhanced Phase 0 parallel scouting for faster project environment ingestion.
+            ### Current Runtime
+            *   OpenCode plugin registration and agent configuration.
+            *   Commander, Planner, Worker, and Reviewer agent scaffolding.
+            *   Session-based worker orchestration through the OpenCode client.
+            *   Local concurrency, notification, metrics, and Rust helper tooling.
 
-            ### Key Features
-            *   Parallel Multi-Agent Orchestration
-            *   Recursive Task Decomposition (Fractal Spawning)
-            *   Multi-Stage Integrity Verification
-            *   Write-Ahead Logging (WAL) for Session Recovery
+            ### Planned Control-Plane Direction
+            *   Server-first REST API for task control.
+            *   Telegram approval and notification layer.
+            *   Provider/model routing and policy-based approval escalation.
+            *   Prometheus metrics, persistent task state, and audit logs.
 
             ---
             ## Installation
             ```bash
-            npm install -g opencode-orchestrator
+            bun add -g opencode-orchestrator
             ```
           generate_release_notes: true
           fail_on_unmatched_files: false
 
-      - name: Publish to GitHub Packages
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@agnusdei1207"
-
       - name: Install Bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: latest
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@agnusdei1207"
+          bun-version: "1.3.13"
 
       - name: Install dependencies
-        run: npm install --force
+        run: bun install --frozen-lockfile
 
       - name: Prepare binaries for NPM
         run: |
@@ -141,7 +133,8 @@ jobs:
 
       - name: Publish to GitHub Registry
         run: |
-          node -e "let pkg=require('./package.json'); pkg.name='@agnusdei1207/opencode-orchestrator'; pkg.publishConfig={registry:'https://npm.pkg.github.com'}; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
-          npm publish
+          printf '@agnusdei1207:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${NPM_CONFIG_TOKEN}\n' > .npmrc
+          bun -e "const fs=require('node:fs'); const pkg=require('./package.json'); pkg.name='@agnusdei1207/opencode-orchestrator'; pkg.publishConfig={registry:'https://npm.pkg.github.com'}; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+          bun publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_TOKEN: ${{ secrets.GITHUB_TOKEN }}

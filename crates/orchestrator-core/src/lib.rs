@@ -1,6 +1,6 @@
-//! OpenCode Orchestrator Core Library
+//! Agent Supervisor core library
 //!
-//! This crate provides the core logic for the OpenCode Orchestrator plugin,
+//! This crate provides the core logic for the Agent Supervisor plugin runtime,
 //! including hooks, tools, and configuration handling.
 //!
 //! # Architecture

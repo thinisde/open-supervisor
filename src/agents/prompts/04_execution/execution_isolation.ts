@@ -78,10 +78,10 @@ describe('[filename] - Isolated Tests', () => {
 ### Test Execution
 \`\`\`bash
 # Run ONLY this isolated test
-npm test -- src/auth/__tests__/login.isolated.test.ts --run
+bun run test -- src/auth/__tests__/login.isolated.test.ts --run
 
 # Verify isolation - should not affect other tests
-npm test -- --run
+bun run test -- --run
 \`\`\`
 
 ### FORBIDDEN:
@@ -90,4 +90,3 @@ npm test -- --run
 - Leaving isolated test files after completion
 - Modifying existing test files in the project
 ${PROMPT_TAGS.ISOLATION_TESTING.close}`;
-

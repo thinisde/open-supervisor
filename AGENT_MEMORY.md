@@ -1,43 +1,53 @@
-# Agent Memory - OCO Session
+# Agent Memory - Agent Supervisor Session
 
 ## Current Task
 
-Confirm the published `opencode-orchestrator@1.2.69` patch is available downstream and watch for any remaining `/task` TUI corruption reports.
+Add an OpenCode project hook that keeps `docs/plans/ROADMAP.md` loaded and synchronized when feature lifecycle status changes.
 
 ## Last Completed Step
 
-Fixed the unsafe toast rendering path, published `opencode-orchestrator@1.2.69`, and prepared the post-release metadata sync commit for push.
+Created `.opencode/plugin/roadmap-lifecycle.ts`, updated `.gitignore` so the hook can be tracked while other `.opencode` runtime files stay ignored, and updated `docs/plans/ROADMAP.md` to mark the roadmap lifecycle hook as done. Verified the hook with `bun --check` and confirmed git status shows the hook as untracked rather than ignored.
 
 ## Next Exact Step
 
-Push the release commit, the follow-up metadata sync commit, and tag `v1.2.69`, then verify the remote branch is clean.
+Restart OpenCode so the auto-discovered `.opencode/plugin/roadmap-lifecycle.ts` hook is loaded, then verify a feature-related prompt receives the roadmap context/reminder.
 
 ## Incomplete Items And Why
 
-- Downstream install verification from a clean shell is still pending because only local build/test and npm publish have been completed in this session.
+- Full platform binary refresh is incomplete because this environment does not have `rustup` or `docker`; only the local macOS arm64 and fallback binaries were refreshed for E2E verification.
+- Standalone REST control-plane server, Telegram bot, Prometheus endpoint, persistent task database, provider registry/model router, policy engine/approval queue, audit log storage, and sandbox manager remain planned roadmap items, not implemented runtime features.
+- Runtime validation inside a restarted OpenCode session is pending because this environment cannot reload the user's running OpenCode process.
 
 ## Key Decisions
 
-- Treat the root cause as a rendering-safety bug in the toast pipeline rather than a mission-loop bug.
-- Sanitize toast titles, inline labels, and multiline bodies separately so task context remains visible without letting control sequences or oversized payloads reach the TUI.
-- Keep raw task metadata untouched in storage and sanitize only at the UI boundary.
+- Use Agent Supervisor as the project/product name.
+- Keep `opencode-orchestrator` as the package/plugin identifier for compatibility until an explicit package rename/migration is planned.
+- Use Bun v1.3.13+ as the package manager and script runtime for project tooling.
+- Add `agent-supervisor-cleanup` and `opencode-orchestrator-cleanup` global cleanup bins instead of relying on `npm explore`.
+- Require `docs/opencode/server.mdx` and `docs/opencode/sdk.mdx` as the source of truth for OpenCode SDK/server assumptions.
+- Track feature implementation status in `docs/plans/ROADMAP.md` using `done`, `in progress`, `not started`, `deferred`, and `cancelled`.
+- Implement roadmap lifecycle enforcement as an auto-discovered OpenCode plugin with `experimental.chat.system.transform`, `chat.message`, and `experimental.session.compacting` hooks.
 
 ## Rejected Alternatives
 
-- Sanitizing only `/task` user input, because delegated task descriptions and error payloads can also inject unsafe content.
-- Truncating task descriptions without stripping terminal control sequences, because escape bytes would still reach the TUI.
-- Refactoring mission/task execution flow, because the evidence pointed to unsafe rendering payloads rather than broken orchestration state.
+- Renaming the npm package from `opencode-orchestrator` to `agent-supervisor` immediately, because repository rules and compatibility expectations currently preserve the package/plugin identifier.
+- Claiming REST API, Telegram, Prometheus, persistent storage, model routing, policy, audit log, or sandbox features as implemented; current work is documentation/tooling/scaffolding alignment.
+- Keeping npm-based project scripts after the user requested Bun migration.
+- Storing the roadmap rule only in static docs, because the user explicitly requested `.opencode` hooks.
 
 ## Known Risks
 
-- The patch is validated by targeted unit tests and local build, not by an interactive OpenCode TUI session in this workspace.
-- The tagged release commit does not include the README version-line sync, so the repository history keeps that as a follow-up commit after the published tag.
+- Package lifecycle scripts now require Bun; users installing with npm without Bun available may fail until distribution assumptions are finalized.
+- Tracked non-local platform binaries may still contain previous branding until rebuilt by the release workflow.
+- `docs/opencode/` and `docs/plans/` were already untracked in the worktree at session start; this task modified files under `docs/plans/` and read but did not modify `docs/opencode/`.
+- `.opencode/plugin/roadmap-lifecycle.ts` depends on OpenCode project plugin auto-discovery and requires an OpenCode restart to take effect.
 
 ## Open These Files First Next Session
 
 1. `AGENT_MEMORY.md`
-2. `README.md`
-3. `src/core/notification/toast-sanitizer.ts`
-4. `src/core/notification/task-toast-manager.ts`
-5. `src/core/notification/toast-core.ts`
-6. `tests/unit/toast-sanitizer.test.ts`
+2. `.opencode/plugin/roadmap-lifecycle.ts`
+3. `docs/plans/ROADMAP.md`
+4. `.gitignore`
+5. `README.md`
+6. `package.json`
+7. `docs/SYSTEM_ARCHITECTURE.md`

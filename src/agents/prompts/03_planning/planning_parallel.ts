@@ -16,7 +16,7 @@ ${TOOL_NAMES.DELEGATE_TASK}({ ${PARALLEL_PARAMS.AGENT}: "${AGENT_NAMES.PLANNER}"
 
 2. BACKGROUND COMMANDS
 \`\`\`
-${TOOL_NAMES.RUN_BACKGROUND}({ command: "npm run build" })
+${TOOL_NAMES.RUN_BACKGROUND}({ command: "bun run build" })
 // ...continue other work...
 ${TOOL_NAMES.CHECK_BACKGROUND}({ ${PARALLEL_PARAMS.TASK_ID}: "xxx" })
 \`\`\`

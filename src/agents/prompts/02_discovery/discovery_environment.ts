@@ -39,7 +39,7 @@ find . -maxdepth 1 -type f              # Root files
 
 | Indicator Files | Likely Environment |
 |----------------|-------------------|
-| package.json, tsconfig.json | Node.js / TypeScript |
+| package.json, bun.lock, tsconfig.json | Bun / TypeScript |
 | Cargo.toml, Cargo.lock | Rust |
 | go.mod, go.sum | Go |
 | requirements.txt, pyproject.toml, setup.py | Python |
@@ -123,4 +123,3 @@ ls -la ${PATHS.OPENCODE}/ 2>/dev/null || echo "No existing context"
 3. If uncertain, ASK the user for clarification
 4. Document EVERYTHING you discover
 ${PROMPT_TAGS.ENVIRONMENT_DISCOVERY.close}`;
-

@@ -93,13 +93,13 @@ describe("harness/builders", () => {
         it("creates a task with custom values", () => {
             const task = createBackgroundTask({
                 id: "custom-bg",
-                command: "npm",
+                command: "bun",
                 status: "done",
                 exitCode: 0,
             });
 
             expect(task.id).toBe("custom-bg");
-            expect(task.command).toBe("npm");
+            expect(task.command).toBe("bun");
             expect(task.status).toBe("done");
             expect(task.exitCode).toBe(0);
         });

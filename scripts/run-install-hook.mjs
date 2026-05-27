@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -25,7 +25,7 @@ function resolveHookCommand(repoRoot, hookName) {
   if (existsSync(sourceEntry)) {
     return {
       command: process.execPath,
-      args: ["--experimental-strip-types", sourceEntry],
+      args: [sourceEntry],
     };
   }
 

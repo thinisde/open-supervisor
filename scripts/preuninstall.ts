@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { existsSync, readFileSync, writeFileSync, appendFileSync, copyFileSync, renameSync, unlinkSync, readdirSync } from "fs";
 import { homedir, tmpdir } from "os";
@@ -406,9 +406,9 @@ function cleanupOldBackups(configFile: string): void {
 }
 
 try {
-  console.log("🧹 OpenCode Orchestrator - Uninstalling...");
+  console.log("🧹 Agent Supervisor (opencode-orchestrator) - Uninstalling...");
   if (isCI) log("Running in CI mode");
-  log("Uninstallation started", { platform: process.platform, node: process.version });
+  log("Uninstallation started", { platform: process.platform, bun: Bun.version });
 
   if (isCI) {
     console.log("ℹ️  CI environment detected. Skipping automatic plugin cleanup.");
@@ -453,7 +453,7 @@ try {
   log("Uninstallation error", { error: String(error) });
   console.error("❌ " + formatError(error, "clean up config"));
   console.log(`   Check logs: ${LOG_FILE}`);
-  process.exit(0); // Don't fail npm uninstall
+  process.exit(0); // Don't fail package removal
 } finally {
   clearTimeout(timeoutId);
 }

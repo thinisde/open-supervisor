@@ -1,6 +1,6 @@
-//! OpenCode Orchestrator CLI
+//! Agent Supervisor CLI
 //!
-//! CLI binary for OpenCode Orchestrator plugin.
+//! CLI binary for the Agent Supervisor plugin runtime.
 //!
 //! ## Philosophy
 //!
@@ -61,7 +61,7 @@ async fn main() -> Result<()> {
 }
 
 fn print_help() {
-    eprintln!("OpenCode Orchestrator v{}", env!("CARGO_PKG_VERSION"));
+    eprintln!("Agent Supervisor v{}", env!("CARGO_PKG_VERSION"));
     eprintln!();
     eprintln!("Usage: orchestrator <command>");
     eprintln!();
@@ -122,7 +122,7 @@ fn list_agents() -> Result<()> {
 
 /// Install: Add plugin config to opencode.json
 async fn install() -> Result<()> {
-    println!("🦀 OpenCode Orchestrator");
+    println!("🦀 Agent Supervisor");
     println!();
 
     let config_path = get_opencode_config_path()?;
@@ -205,7 +205,7 @@ async fn serve() -> Result<()> {
         .with_writer(io::stderr)
         .init();
 
-    info!("OpenCode Orchestrator starting");
+    info!("Agent Supervisor starting");
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();

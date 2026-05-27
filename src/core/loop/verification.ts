@@ -316,7 +316,7 @@ Before concluding, you MUST create and complete a verification checklist at \`${
 5. **Only conclude when ALL items are [x]**
 
 ### Environment Discovery Hints
-- \`package.json\` → npm scripts, test commands
+- \`package.json\` → Bun scripts, test commands
 - \`Makefile\` → make targets
 - \`docker-compose.yml\` → container orchestration
 - \`Dockerfile\` → container build
@@ -528,4 +528,3 @@ export function buildVerificationSummary(result: VerificationResult): string {
     }
     return `[Verification ${status}] TODO: ${result.todoProgress}, Sync: ${result.syncIssuesEmpty ? 'clean' : result.syncIssuesCount + ' issues'}`;
 }
-

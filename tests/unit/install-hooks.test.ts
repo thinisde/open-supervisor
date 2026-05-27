@@ -8,9 +8,10 @@ const repoRoot = path.resolve(__dirname, "../..");
 const runnerPath = path.join(repoRoot, "scripts", "run-install-hook.mjs");
 const postinstallPath = path.join(repoRoot, "scripts", "postinstall.ts");
 const preuninstallPath = path.join(repoRoot, "scripts", "preuninstall.ts");
+const bunPath = process.env.BUN_EXECUTABLE || "bun";
 
-function runNode(args: string[], cwd: string, env: NodeJS.ProcessEnv = {}) {
-    return spawnSync(process.execPath, args, {
+function runBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = {}) {
+    return spawnSync(bunPath, args, {
         cwd,
         env: { ...process.env, ...env },
         encoding: "utf8",
@@ -37,7 +38,7 @@ function buildHook(entryPath: string, outfile: string) {
 }
 
 describe("install hook bootstrap", () => {
-    it("falls back to source TypeScript hook when dist is missing", async () => {
+    it("falls back to source TypeScript hook through Bun when dist is missing", async () => {
         await using tmp = await tmpdir({ prefix: "install-hook-runner-" });
         const scriptsDir = path.join(tmp.path, "scripts");
         mkdirSync(scriptsDir, { recursive: true });
@@ -48,7 +49,7 @@ describe("install hook bootstrap", () => {
             'console.log("source hook executed");\n'
         );
 
-        const result = runNode(
+        const result = runBun(
             [path.join("scripts", "run-install-hook.mjs"), "postinstall"],
             tmp.path
         );
@@ -74,7 +75,7 @@ describe("install hook bootstrap", () => {
             'console.log("dist hook executed");\n'
         );
 
-        const result = runNode(
+        const result = runBun(
             [path.join("scripts", "run-install-hook.mjs"), "postinstall"],
             tmp.path
         );
@@ -90,7 +91,7 @@ describe("install hook bootstrap", () => {
         mkdirSync(scriptsDir, { recursive: true });
         writeFileSync(path.join(scriptsDir, "run-install-hook.mjs"), readFileSync(runnerPath, "utf8"));
 
-        const result = runNode(
+        const result = runBun(
             [path.join("scripts", "run-install-hook.mjs"), "postinstall"],
             tmp.path
         );
@@ -100,7 +101,7 @@ describe("install hook bootstrap", () => {
     });
 
     it("fails for an unknown hook name", async () => {
-        const result = runNode([runnerPath, "unknown-hook"], repoRoot);
+        const result = runBun([runnerPath, "unknown-hook"], repoRoot);
 
         expect(result.status).toBe(1);
         expect(result.stderr).toContain("Unknown install hook");
@@ -108,7 +109,7 @@ describe("install hook bootstrap", () => {
 });
 
 describe("install hook scripts", () => {
-    it("built dist postinstall runs under Node 24 without dynamic require failures", async () => {
+    it("built dist postinstall runs under Bun without dynamic require failures", async () => {
         await using tmp = await tmpdir({ prefix: "postinstall-dist-" });
         const builtHook = path.join(tmp.path, "postinstall.js");
         const configRoot = path.join(tmp.path, "xdg");
@@ -116,7 +117,7 @@ describe("install hook scripts", () => {
         const buildResult = buildHook(postinstallPath, builtHook);
         expect(buildResult.status).toBe(0);
 
-        const result = runNode(
+        const result = runBun(
             [builtHook],
             repoRoot,
             { XDG_CONFIG_HOME: configRoot, HOME: tmp.path }
@@ -133,8 +134,8 @@ describe("install hook scripts", () => {
         await using tmp = await tmpdir({ prefix: "postinstall-jsonc-" });
         const configRoot = path.join(tmp.path, "xdg");
 
-        const result = runNode(
-            ["--experimental-strip-types", postinstallPath],
+        const result = runBun(
+            [postinstallPath],
             repoRoot,
             { XDG_CONFIG_HOME: configRoot, HOME: tmp.path }
         );
@@ -161,8 +162,8 @@ describe("install hook scripts", () => {
             ].join("\n")
         );
 
-        const result = runNode(
-            ["--experimental-strip-types", postinstallPath],
+        const result = runBun(
+            [postinstallPath],
             repoRoot,
             { XDG_CONFIG_HOME: path.join(tmp.path, "xdg"), HOME: tmp.path }
         );
@@ -178,8 +179,8 @@ describe("install hook scripts", () => {
         await using tmp = await tmpdir({ prefix: "postinstall-ci-" });
         const configRoot = path.join(tmp.path, "xdg");
 
-        const result = runNode(
-            ["--experimental-strip-types", postinstallPath],
+        const result = runBun(
+            [postinstallPath],
             repoRoot,
             { CI: "true", XDG_CONFIG_HOME: configRoot, HOME: tmp.path }
         );
@@ -197,8 +198,8 @@ describe("install hook scripts", () => {
         writeFileSync(configFile, JSON.stringify({ plugin: ["opencode-orchestrator"] }, null, 2));
 
         const before = readFileSync(configFile, "utf8");
-        const result = runNode(
-            ["--experimental-strip-types", preuninstallPath],
+        const result = runBun(
+            [preuninstallPath],
             repoRoot,
             { CI: "true", XDG_CONFIG_HOME: path.join(tmp.path, "xdg"), HOME: tmp.path }
         );
@@ -218,8 +219,8 @@ describe("install hook scripts", () => {
             JSON.stringify({ plugin: ["oh-my-openagent@latest"] }, null, 2)
         );
 
-        const result = runNode(
-            ["--experimental-strip-types", preuninstallPath],
+        const result = runBun(
+            [preuninstallPath],
             repoRoot,
             { XDG_CONFIG_HOME: path.join(tmp.path, "xdg"), HOME: tmp.path }
         );
@@ -249,8 +250,8 @@ describe("install hook scripts", () => {
             ].join("\n")
         );
 
-        const result = runNode(
-            ["--experimental-strip-types", preuninstallPath],
+        const result = runBun(
+            [preuninstallPath],
             repoRoot,
             { XDG_CONFIG_HOME: path.join(tmp.path, "xdg"), HOME: tmp.path }
         );
@@ -262,7 +263,7 @@ describe("install hook scripts", () => {
         expect(updated).not.toContain('"opencode-orchestrator"');
     });
 
-    it("built dist preuninstall runs under Node 24 and removes only our plugin", async () => {
+    it("built dist preuninstall runs under Bun and removes only our plugin", async () => {
         await using tmp = await tmpdir({ prefix: "preuninstall-dist-" });
         const builtHook = path.join(tmp.path, "preuninstall.js");
         const configDir = path.join(tmp.path, "xdg", "opencode");
@@ -281,7 +282,7 @@ describe("install hook scripts", () => {
         const buildResult = buildHook(preuninstallPath, builtHook);
         expect(buildResult.status).toBe(0);
 
-        const result = runNode(
+        const result = runBun(
             [builtHook],
             repoRoot,
             { XDG_CONFIG_HOME: path.join(tmp.path, "xdg"), HOME: tmp.path }
@@ -316,8 +317,8 @@ describe("install hook scripts", () => {
             JSON.stringify({ plugin: ["opencode-orchestrator@1.2.66", "other-plugin"] }, null, 2)
         );
 
-        const result = runNode(
-            ["--experimental-strip-types", preuninstallPath],
+        const result = runBun(
+            [preuninstallPath],
             repoRoot,
             { XDG_CONFIG_HOME: path.join(tmp.path, "xdg"), HOME: tmp.path }
         );

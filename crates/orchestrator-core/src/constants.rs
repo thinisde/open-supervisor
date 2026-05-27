@@ -1,4 +1,4 @@
-//! Shared constants for OpenCode Orchestrator
+//! Shared constants for Agent Supervisor
 //! 
 //! CRITICAL: These constants must be synchronized with the TypeScript 
 //! implementation (tests/unit/rust-tools-wrapper.test.ts and various tool definitions).

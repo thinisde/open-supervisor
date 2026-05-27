@@ -5,7 +5,7 @@
 import type { NotificationConfig } from "../interfaces/notification-config.js";
 
 export const NOTIFICATION_DEFAULTS: Required<NotificationConfig> = {
-    title: "OpenCode Orchestrator",
+    title: "Agent Supervisor",
     message: "Task completed",
     playSound: true,
     soundPath: "",

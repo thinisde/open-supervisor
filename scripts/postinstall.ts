@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, copyFileSync, renameSync, unlinkSync, readdirSync } from "fs";
 import { homedir, tmpdir } from "os";
@@ -456,8 +456,8 @@ function cleanupOldBackups(configFile: string): void {
 
 try {
   if (isCI) log("Running in CI mode");
-  console.log("🎯 OpenCode Orchestrator - Installing...");
-  log("Installation started", { platform: process.platform, node: process.version });
+  console.log("🎯 Agent Supervisor (opencode-orchestrator) - Installing...");
+  log("Installation started", { platform: process.platform, bun: Bun.version });
 
   if (isCI) {
     console.log("ℹ️  CI environment detected. Skipping automatic plugin registration.");
@@ -527,14 +527,14 @@ try {
   clearTimeout(timeoutId);
 
   console.log("");
-  console.log("🚀 Ready! Restart OpenCode to use.");
+  console.log("🚀 Ready! Restart OpenCode to use the current plugin runtime.");
   console.log("");
   log("Installation completed", { registered, alreadyRegistered, skippedCorrupt, backupCreated });
 } catch (error) {
   log("Installation error", { error: String(error) });
   console.error("❌ " + formatError(error, "register plugin"));
   console.log(`   Check logs: ${LOG_FILE}`);
-  process.exit(0); // Don't fail npm install
+  process.exit(0); // Don't fail package installation
 } finally {
   clearTimeout(timeoutId);
 }

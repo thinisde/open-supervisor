@@ -1,10 +1,9 @@
-
 ---
 
 <div align="center">
   <img src="assets/logo.png" alt="logo" width="200" />
-  <h1>OpenCode Orchestrator</h1>
-  <p>Production-Grade Multi-Agent Orchestration Engine for High-Integrity Software Engineering</p>
+  <h1>Agent Supervisor</h1>
+  <p>OpenCode-native multi-agent control plane for self-hosted AI engineering workflows</p>
 
   [![MIT License](https://img.shields.io/badge/license-MIT-red.svg)](LICENSE)
   [![npm](https://img.shields.io/npm/v/opencode-orchestrator.svg)](https://www.npmjs.com/package/opencode-orchestrator)
@@ -13,344 +12,235 @@
   <!-- VERSION:END -->
 </div>
 
-
 ---
 
-## ⚡ Quick Start
+## Project Direction
+
+Agent Supervisor is an OpenCode-based multi-agent control plane.
+
+The target system is a long-lived server that manages a hierarchy of AI agents. A Master/Supervisor Agent receives tasks, decomposes work, selects models/providers, spawns isolated OpenCode worker agents, monitors progress, routes approvals through policy, and escalates to the human owner only when necessary.
+
+The current package is still distributed as the `opencode-orchestrator` OpenCode plugin for compatibility. The control-plane server, public REST API, Telegram bot, Prometheus endpoint, persistent task database, and provider registry are planned architecture unless explicitly noted as implemented.
+
+## Current Implementation
+
+Today this repository provides an OpenCode plugin runtime with:
+
+- OpenCode plugin registration through `opencode.json` or `opencode.jsonc`
+- `Commander`, `Planner`, `Worker`, and `Reviewer` agent definitions
+- `/task`, `/plan`, and `/agents` helper commands inside OpenCode
+- session-based worker spawning through the OpenCode SDK/client
+- task tracking, polling, and completion detection
+- concurrency controls, session pooling, and cleanup hooks
+- TUI toast notifications and local metrics collection
+- Rust-backed search/tool helpers for performance-sensitive operations
+
+OpenCode server and SDK assumptions must be verified against the local reference docs:
+
+- [`docs/opencode/server.mdx`](docs/opencode/server.mdx)
+- [`docs/opencode/sdk.mdx`](docs/opencode/sdk.mdx)
+
+## Target Architecture
+
+```text
+Human Owner
+  -> API / Telegram / CLI
+  -> Control Plane Server
+  -> Master / Supervisor Agent
+  -> Agent Coordinator / Scheduler
+  -> Worker Agent Pool
+       -> Planner Agent
+       -> Coder Agent
+       -> Reviewer Agent
+       -> Debugger Agent
+       -> DevOps Agent
+       -> Research Agent
+       -> Security Agent
+  -> OpenCode Runtime Instances
+  -> Git Worktrees / Sandboxes / Repositories
+```
+
+The control plane is intended to be API-first and server-first. A web dashboard is not part of the first milestone.
+
+## Agent Roles
+
+| Agent | Target Responsibility |
+| --- | --- |
+| Master / Supervisor Agent | Understand tasks, create plans, route approvals, select models/providers, review worker output, produce final reports |
+| Agent Coordinator / Scheduler | Allocate worker sessions, enforce concurrency limits, track lifecycle state |
+| Planner Agent | Decompose work, identify dependencies, define execution order |
+| Coder Agent | Implement patches in isolated task context |
+| Reviewer Agent | Check correctness, regressions, tests, and policy compliance |
+| Debugger Agent | Investigate logs, failing tests, and runtime behavior |
+| DevOps Agent | Handle CI, containers, deployment planning, and operational tasks |
+| Research Agent | Gather external information and summarize evidence |
+| Security Agent | Review permissions, secrets, dependency risk, and destructive actions |
+
+The current runtime implements the `Commander`, `Planner`, `Worker`, and `Reviewer` roles. Additional worker roles are roadmap items.
+
+## Server/API Concept
+
+The planned control plane should expose a REST API for automation and integrations, with optional WebSocket or SSE streams for live events.
+
+Proposed endpoints:
+
+```text
+POST   /v1/tasks
+GET    /v1/tasks/:id
+GET    /v1/tasks/:id/events
+POST   /v1/tasks/:id/approve
+POST   /v1/tasks/:id/reject
+GET    /v1/agents
+GET    /v1/providers
+GET    /metrics
+```
+
+The server should eventually support task submission, task status tracking, agent lifecycle management, logs/events, approval queues, model/provider routing, Prometheus metrics, Telegram integration, persistent task state, and audit logs.
+
+## Approval And Escalation
+
+The target approval model is an escalation chain, not human approval for every action.
+
+```text
+Worker Agent
+  -> Master Agent
+  -> Policy Engine
+  -> Human Owner only if needed
+```
+
+Low-risk actions should be eligible for automatic approval by the Master Agent or policy layer:
+
+- read files
+- inspect code
+- edit non-critical files
+- run tests and formatters
+- create summaries
+- propose patches
+
+High-risk or ambiguous actions should escalate to the human owner:
+
+- deleting large file sets
+- modifying secrets
+- production deployment
+- database migrations
+- billing/provider configuration changes
+- force-pushing git history
+- destructive shell commands
+- high-cost model usage
+- unclear architectural direction
+
+## Model And Provider Routing
+
+The target control plane is provider-agnostic. The Master Agent should choose models/providers per task and per agent based on complexity, cost, latency, coding ability, reasoning ability, context length, privacy requirements, provider availability, and fallback policy.
+
+Potential providers include OpenAI, Anthropic, OpenRouter, Google Gemini, Groq, Mistral, Ollama/local models, and custom OpenAI-compatible endpoints.
+
+Example routing goals:
+
+- Planner Agent: strong reasoning model
+- Coder Agent: strong code model
+- Reviewer Agent: high-accuracy model
+- Research Agent: cheap/fast model with web tools
+- Debugger Agent: code model with shell access
+- Security Agent: conservative high-reliability model
+
+## Telegram Integration Concept
+
+Telegram is the planned first human control interface. It should support task notifications, approval prompts, reject/approve buttons, short status updates, final reports, error alerts, pause/resume/stop controls, log previews, and direct questions to the Master Agent.
+
+Example flow:
+
+1. User submits a task through the API.
+2. Master Agent creates a plan.
+3. Worker Agent requests approval for a risky action.
+4. Master Agent auto-approves if policy allows it.
+5. If risk is too high or unclear, Telegram sends an approval prompt.
+6. Human owner taps Approve or Reject.
+7. Task execution continues and the final report is sent.
+
+## Observability Concept
+
+The target server should expose Prometheus-compatible metrics and structured logs.
+
+Planned metrics include:
+
+- `active_tasks`
+- `active_agents`
+- `queued_tasks`
+- `task_duration_seconds`
+- `agent_runtime_seconds`
+- `model_tokens_total`
+- `model_cost_estimated_total`
+- `approval_requests_total`
+- `human_escalations_total`
+- `task_failures_total`
+- `provider_errors_total`
+- `worker_restarts_total`
+
+Structured logs and audit trails should capture task lifecycle events, approval decisions, model/provider selection, worker restarts, and policy outcomes.
+
+## Quick Start
+
+Install the current OpenCode plugin with Bun:
 
 ```bash
-npm install -g opencode-orchestrator
+bun add -g opencode-orchestrator
 ```
 
 Install hooks are source-checkout safe, prefer `opencode.jsonc` when present, preserve sibling plugin entries, and skip automatic config mutation in CI environments.
 
-To remove the plugin safely later, run:
-
-```bash
-npm explore -g opencode-orchestrator -- npm run cleanup:plugin
-npm uninstall -g opencode-orchestrator
-```
-
-`npm uninstall -g` does not run dependency uninstall hooks in the npm 11 flow verified for this repo, so config cleanup is explicit.
-
 Inside an OpenCode environment:
+
 ```bash
 /task "Implement a new authentication module with JWT and audit logs"
 ```
 
-
----
-
-## 🚀 Engine Workflow
-
-**Hub-and-Spoke Architecture** with Work-Stealing Queues for parallel, context-isolated task execution.
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                           USER INPUT /task "..."                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-                                         │
-                                         ▼
-╔══════════════════════════════════════════════════════════════════════════════╗
-║  ┌─────────────────────────────────────────────────────────────────────────┐ ║
-║  │                            C O M M A N D E R                           │ ║
-║  │                    [ Mission Analysis & Delegation ]                    │ ║
-║  │                                                                          │ ║
-║  │    • Interprets user intent    • Coordinates multi-agent workflow      │ ║
-║  │    • Monitors progress          • Manages work-stealing queues         │ ║
-║  └─────────────────────────────────────────────────────────────────────────┘ ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-                                         │
-                         ┌───────────────┼───────────────┐
-                         ▼               ▼               ▼
-╔═════════════════╗  ╔═════════════════╗  ╔═════════════════╗
-║   P L A N N E R ║  ║     W O R K E R ║  ║    W O R K E R   ║
-║  [Architect]    ║  ║  [Implementer]  ║  ║  [Implementer]   ║
-║                 ║  ║                 ║  ║                 ║
-║  • Dependency   ║  ║  • File coding ║  ║  • File coding  ║
-║    analysis     ║  ║  • TDD workflow ║  ║  • TDD workflow ║
-║  • Roadmap gen ║  ║  • Documentation║  ║  • Documentation║
-║  • TODO.md      ║  ║                 ║  ║                 ║
-╚═════════════════╝  ╚═════════════════╝  ╚═════════════════╝
-         │                   │                     │
-         │    ┌──────────────┼─────────────────────┘
-         │    │              │
-         ▼    ▼              ▼
-╔══════════════════════════════════════╗
-║         SESSION POOL (MVCC Sync)   ║
-║   ┌─────────────────────────────────┐ ║
-║   │  Object Pool │ Buffer Pool      │ ║
-║   │  String Pool │ Connection Pool  │ ║
-║   └─────────────────────────────────┘ ║
-╚══════════════════════════════════════╝
-         │
-         ▼
-╔══════════════════════════════════════╗
-║       MSVP MONITOR / REVIEWER       ║
-║  ┌─────────────────────────────────┐ ║
-║  │  • Adaptive polling (500ms-5s) │ ║
-║  │  • Stability detection         │ ║
-║  │  • Unit test verification      │ ║
-║  └─────────────────────────────────┘ ║
-╚══════════════════════════════════════╝
-                 │
-                 ▼
-        ┌────────────────┐
-        │  ✨ COMPLETED  │
-        └────────────────┘
-```
-
----
-
-## 🏗️ Architecture Layers
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           PRESENTATION LAYER                                │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
-│  │ Task Toast  │  │ Progress    │  │ Notification│  │ Mission Summary │  │
-│  │ Manager     │  │ Notifier    │  │ Manager     │  │ Display         │  │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────┘  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                           BUSINESS LOGIC LAYER                              │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                    Parallel Agent Orchestration                        │  │
-│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────────┐  │  │
-│  │  │ Commander  │  │  Planner   │  │  Worker    │  │   Reviewer     │  │  │
-│  │  │   Agent    │  │   Agent    │  │   Agent    │  │     Agent      │  │  │
-│  │  └────────────┘  └────────────┘  └────────────┘  └────────────────┘  │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐│
-│  │ Concurrency     │  │   Task Store   │  │    Hook System              ││
-│  │ Controller      │  │   (In-Memory)  │  │  [Early/Normal/Late Phases] ││
-│  └─────────────────┘  └─────────────────┘  └─────────────────────────────┘│
-├─────────────────────────────────────────────────────────────────────────────┤
-│                           INFRASTRUCTURE LAYER                              │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────┐  │
-│  │ Session Pool   │  │ Work-Stealing  │  │    Memory Pools           │  │
-│  │ [5 per agent]  │  │ [Chase-Lev]    │  │  ┌──────┐ ┌──────┐ ┌─────┐│  │
-│  │ [10 reuse max] │  │ [LIFO/FIFO]    │  │  │Object│ │String│ │Buffer││  │
-│  └────────────────┘  └────────────────┘  │  │ 200  │ │ intern│ │ 4KB ││  │
-│                                          │  └──────┘ └──────┘ └─────┘│  │
-│  ┌────────────────┐  ┌────────────────┐  └────────────────────────────┘  │
-│  │ MVCC State     │  │ Circuit Breaker │  ┌────────────────────────────┐  │
-│  │ [Atomic Sync]  │  │ [5 failures→open│  │ Rust Connection Pool     │  │
-│  │                │  │  [2 success→close│ │ [4 processes, 30s idle]   │  │
-│  └────────────────┘  └────────────────┘  └────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                           SAFETY LAYER                                      │
-│  ┌────────────────┐  ┌────────────────┐  ┌─────────────────────────────┐ │
-│  │ RAII Pattern   │  │ Shutdown       │  │ Auto-Recovery               │ │
-│  │ [Zero Leaks]   │  │ Manager        │  │ [Exponential Backoff]       │ │
-│  │                │  │ [5s timeout]   │  │ [Rate limit handling]       │ │
-│  └────────────────┘  └────────────────┘  └─────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🧪 Test Utilities
-
-Reusable test helpers keep filesystem, task, and process-heavy flows deterministic:
-
-```
-tests/harness/
-├── fixture.ts          Disposable tmpdir utilities
-│   ├── tmpdir()        async disposable with cleanup
-│   ├── tmpdirSync()    sync disposable with cleanup  
-│   ├── createMockFs()  In-memory fs mock
-│   └── waitFor()       Async condition waiter
-│
-├── builders.ts         Factory functions for test objects
-│   ├── createParallelTask()    Build ParallelTask instances
-│   ├── createBackgroundTask()  Build BackgroundTask instances
-│   └── createTodo()            Build Todo instances
-│
-├── mocks.ts           Mock utilities
-│   ├── mockConsole()         Spy on console.log/error
-│   ├── mockProcessExit()     Mock process.exit
-│   ├── useFakeTimers()       Time manipulation
-│   └── createMockEmitter()   EventEmitter spy
-│
-└── index.ts           Unified exports
-```
-
-### Usage Example
-
-```typescript
-import { tmpdir, createParallelTask, mockConsole } from "@/tests/harness";
-
-describe("My test", () => {
-  let consoleMock;
-
-  beforeEach(() => {
-    consoleMock = mockConsole();
-    consoleMock.setup();
-  });
-
-  afterEach(() => {
-    consoleMock.restore();
-  });
-
-  it("should work", async () => {
-    await using tmp = await tmpdir({ git: true });
-    const task = createParallelTask({ description: "Test" });
-    expect(task.status).toBe("pending");
-  });
-});
-```
-
----
-
-## ⚡ Elite Multi-Agent Swarm
-
-| Agent | Role | Core Responsibilities |
-|:------|:-----|:------------------------|
-| **Commander** | Mission Hub | Task decomposition, agent coordination, work-stealing orchestration, final mission seal |
-| **Planner** | Architect | Dependency analysis, roadmap generation, TODO.md creation via MVCC, file-level planning |
-| **Worker** | Implementer | High-throughput coding, TDD workflow, documentation, isolated file execution |
-| **Reviewer** | Auditor | Unit test verification, LSP/Lint validation, integration testing, quality gate |
----
-
-## 🛠️ Core Capabilities
-
-### 🔒 Atomic MVCC State Synchronization
-Solves the "Concurrent TODO Update" problem using **MVCC + Mutex**. Agents safely mark tasks complete in parallel without data loss or race conditions. Every state change is cryptographically hashed and logged.
-
-### 🧩 Advanced Hook Orchestration
-Execution flows governed by a **Priority-Phase Hook Registry**. Hooks are grouped into phases (`early`, `normal`, `late`) and executed via **Topological Sort** for predictable, dependency-aware ordering.
-
-### 🛡️ Autonomous Recovery
-- **Self-healing loops** with adaptive stagnation detection
-- **Proactive Agency**: Smart monitoring that audits logs and plans ahead during background tasks
-- **Auto-retry with backoff**: Exponential backoff for transient failures
-
-### 🎯 State-Level Session Isolation
-Reused sessions in the **SessionPool** are explicitly reset via server-side compaction, ensuring previous task context never leaks into new tasks.
-
-### 🚀 Zero-Payload Turbo Mode
-Leverages `system.transform` to unshift agent instruction sets server-side, reducing initial message payloads by **90%+** and preventing context fragmentation.
-
-### 🧠 Hierarchical Memory System
-Maintains focus across thousands of conversation turns using a 4-tier memory structure with **EMA-based Context Gating** to preserve architectural truth while pruning noise.
-
-### 🔄 Adaptive Intelligence Loop
-- **Stagnation Detection**: Senses when no progress is made across iterations
-- **Diagnostic Intervention**: Forces "Diagnostic Mode" mandating log audits and strategy pivots
-- **Proactive Agency**: Mandates Speculative Planning during background task execution
-
----
-
-## ⚙️ Performance Benchmarks
-
-| Metric | Improvement |
-|:-------|:------------|
-| CPU Utilization | 90%+ (up from 50-70%) |
-| Tool Call Speed | 10x faster (5-10ms vs 50-100ms) via Rust pool |
-| Session Creation | 90% faster (50ms vs 500ms) via session pooling |
-| Memory Usage | 60% reduction via object/string/buffer pooling |
-| GC Pressure | 80% reduction |
-| Token Efficiency | 40% reduction via Incremental State & System Transform |
-| Sync Accuracy | 99.95% via MVCC+Mutex |
-| Parallel Efficiency | 80% improvement (50% → 90%+) |
-
----
-
-## 🏗️ Infrastructure & Reliability
-
-### Resource Safety
-- **RAII Pattern**: Guaranteed resource cleanup with zero leaks
-- **ShutdownManager**: Priority-based graceful shutdown (5s timeout per handler)
-- **Atomic File Operations**: Temp file + rename for corruption-proof writes
-- **Automatic Backups**: Timestamped config backups with rollback support
-
-### Safety Features
-- **Circuit Breaker**: Auto-recovery from API failures (5 failures → open)
-- **Resource Pressure Detection**: Rejects low-priority tasks when memory > 80%
-- **Terminal Node Guard**: Prevents infinite recursion via depth limit
-- **Auto-Scaling**: Concurrency slots adjust based on success/failure rate
-
-### Technical Stack
-- **Runtime**: Node.js 18+ (TypeScript)
-- **Tools**: Rust-based CLI tools (grep, glob, ast) via connection pool
-- **Concurrency**: Chase-Lev work-stealing deque + priority queues
-- **Memory**: Object pooling + string interning + buffer pooling
-- **State Management**: MVCC + Mutex
-- **Safety**: RAII + circuit breaker + resource pressure detection
-
----
-
-## 🔧 Installation & Configuration
-
-### Safe Installation
-The installation process is **production-safe** with multiple protection layers:
-
-1. ✅ **Never overwrites** — always merges with existing config
-2. ✅ **Automatic backups** — timestamped, last 5 kept
-3. ✅ **Atomic writes** — temp file + rename (OS-level atomic)
-4. ✅ **Automatic rollback** — restores from backup on any failure
-5. ✅ **Cross-platform** — Windows (native, Git Bash, WSL2), macOS, Linux
-6. ✅ **CI-aware** — skips non-essential operations in CI environments
-7. ✅ **Timeout protection** — 30s timeout prevents hanging
-8. ✅ **Graceful degradation** — exits 0 on non-critical failures
-
-### Safe Removal
-OpenCode config cleanup is provided as an explicit command because global package uninstall does not invoke dependency uninstall hooks in the npm flow validated for this package.
+To remove the plugin safely later:
 
 ```bash
-npm explore -g opencode-orchestrator -- npm run cleanup:plugin
-npm uninstall -g opencode-orchestrator
+agent-supervisor-cleanup
+bun remove -g opencode-orchestrator
 ```
 
-Manual fallback:
-- Open `~/.config/opencode/opencode.json` or `opencode.jsonc`
-- Remove `"opencode-orchestrator"` from the `plugin` array
+Package removal does not reliably run dependency cleanup hooks across package managers, so OpenCode config cleanup is explicit.
 
-### Configuration Logs
-- Unix: `/tmp/opencode-orchestrator.log`
-- Windows: `%TEMP%\opencode-orchestrator.log`
+## Development
 
----
-
-## 🧪 Testing & Stability
-
-### Test Utilities
-Reusable helpers under `tests/harness/` provide:
-- **Disposable tmpdir**: Automatic cleanup with `Symbol.asyncDispose` / `Symbol.dispose`
-- **Test builders**: Factory functions for `ParallelTask`, `BackgroundTask`, `Todo`
-- **Mock utilities**: Console, process, timers, file system, event emitter mocks
-
-```typescript
-import { tmpdir, createParallelTask, mockConsole } from "@/tests/harness";
-
-await using tmp = await tmpdir({ git: true });
-const task = createParallelTask({ description: "Test" });
+```bash
+bun install
+bun run build
+bun run test:unit
 ```
 
-### TUI Stability
-- **Cleanup guarantees**: `initToastClient()` returns a cleanup function
-- **Timeout protection**: AbortController-based 2-10s timeout for async toast operations
-- **Error isolation**: Try/catch around all toast operations prevents cascade failures
+Useful scripts:
 
-### Cross-Platform Reliability
-- **Windows guard**: Proper handling of WSL2, Git Bash, native Windows paths
-- **Signal handling**: Graceful shutdown on SIGINT/SIGTERM
-- **Process isolation**: Child process cleanup with timeout
+- `bun run build`: build the TypeScript plugin and install-hook scripts
+- `bun run build:all`: build TypeScript and Rust distribution binaries through Docker
+- `bun run test:unit`: run TypeScript unit tests
+- `bun run test:e2e`: run E2E tests
+- `bun run rust:test`: run Rust tests
+- `bun run log`: follow the local plugin log
 
----
+## Documentation
 
-## 📚 Documentation
+- [System Architecture](docs/SYSTEM_ARCHITECTURE.md)
+- [Developer Note](docs/DEVELOPERS_NOTE.md)
+- [OpenCode Server Reference](docs/opencode/server.mdx)
+- [OpenCode SDK Reference](docs/opencode/sdk.mdx)
+- [Control Plane Goals](docs/plans/goals.md)
 
-- [System Architecture Deep-Dive →](docs/SYSTEM_ARCHITECTURE.md)
-- [Developer Notes →](docs/DEVELOPERS_NOTE.md)
+## Development Status
 
----
+This repository is an early-stage architecture and orchestration framework moving toward a self-hostable OpenCode control plane. Many server-control-plane features are planned, experimental, partially implemented, or under active exploration. Feature implementation status is tracked in [`docs/plans/ROADMAP.md`](docs/plans/ROADMAP.md).
 
-## 📄 License
+Do not treat the planned REST API, Telegram integration, Prometheus endpoint, persistent task state, model router, provider registry, policy engine, audit log, or sandbox manager as complete until corresponding code and tests exist.
 
-MIT License — see [LICENSE](LICENSE) for details.
+## License
+
+MIT License - see [LICENSE](LICENSE) for details. Original copyright notices and license attributions must be preserved.
 
 ---
 
 <div align="center">
-  <sub>Built with ⚡ for production-grade autonomous software engineering</sub>
+  <sub>OpenCode-native control-plane infrastructure for autonomous software engineering</sub>
 </div>

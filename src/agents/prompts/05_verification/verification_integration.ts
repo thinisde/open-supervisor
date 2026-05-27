@@ -26,7 +26,7 @@ As the **Final Quality Gate**, you are responsible for ensuring the system works
 - Ensure shared types are consistent and exported correctly.
 
 #### Step 2: System Build & Test
-- Run the full project build command (e.g., \`npm run build\`).
+- Run the full project build command (e.g., \`bun run build\`).
 - Execute the complete test suite including E2E tests.
 
 #### Step 3: Record Sync Issues
@@ -43,4 +43,3 @@ When instructed by ${AGENT_NAMES.COMMANDER} for a "${VERIFICATION_SIGNALS.FINAL_
 2. Provide a definitive "PASSED" or "FAILED" status to ${AGENT_NAMES.COMMANDER}.
 
 ${PROMPT_TAGS.INTEGRATION_TESTING.close}`;
-

@@ -1,10 +1,11 @@
 /**
- * OpenCode Orchestrator Plugin
+ * Agent Supervisor OpenCode plugin runtime
  *
- * This is the main entry point for the 4-Agent consolidated architecture.
- * Handlers are modularized in src/plugin-handlers/ for maintainability.
+ * This is the current OpenCode plugin entry point for the control-plane
+ * scaffolding. It registers the implemented Commander/Planner/Worker/Reviewer
+ * runtime while the standalone server-first control plane remains planned.
  *
- * The agents are: Commander, Planner, Worker, Reviewer
+ * Verify OpenCode server and SDK assumptions against docs/opencode/*.mdx.
  */
 
 import { createRequire } from "node:module";

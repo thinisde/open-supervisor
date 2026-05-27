@@ -53,3 +53,16 @@
 ```
 
 > ✅ 위 체크리스트를 **전부** 통과한 뒤에만 작업을 완료로 선언할 수 있다.
+
+---
+
+## OpenCode SDK/Server 사후 검증
+
+OpenCode SDK, server, session, message, provider, TUI, auth, event, permission 흐름을 변경했거나 문서화했다면 완료 전 아래를 재확인한다:
+
+```
+☑ docs/opencode/server.mdx 기준 endpoint/flag/event 설명 일치
+☑ docs/opencode/sdk.mdx 기준 client method/body/response 설명 일치
+☑ 현재 OpenCode server API와 계획 중인 control-plane /v1 API를 혼동하지 않음
+☑ OpenCode compatibility 영향과 롤백 경로 확인
+```

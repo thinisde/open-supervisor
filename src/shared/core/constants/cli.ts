@@ -3,6 +3,8 @@
  */
 
 export const CLI_NAME = {
+    BUN: "bun",
+    BUNX: "bunx",
     NPX: "npx",
     TSC: "tsc",
     ESLINT: "eslint",

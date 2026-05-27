@@ -1,4 +1,4 @@
-//! Error types for OpenCode Orchestrator
+//! Error types for Agent Supervisor
 
 use thiserror::Error;
 

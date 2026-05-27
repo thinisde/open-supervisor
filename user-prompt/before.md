@@ -21,3 +21,14 @@
 ```
 
 > ✅ 위 항목을 **모두** 완료한 뒤에만 본 작업을 시작하라.
+
+---
+
+## OpenCode SDK/Server 확인 (MANDATORY WHEN RELEVANT)
+
+OpenCode SDK, server, session, message, provider, TUI, auth, event, permission 흐름과 관련된 작업이면 시작 전에 반드시 아래 파일을 열고 확인한다:
+
+- `docs/opencode/server.mdx`
+- `docs/opencode/sdk.mdx`
+
+`client.session.*`, `client.config.*`, `client.tui.*`, OpenCode server endpoint, `opencode serve` flag, SSE event stream은 기억으로 추정하지 않는다.

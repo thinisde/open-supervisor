@@ -170,6 +170,13 @@
 - 계획 문서는 future work만 적지 말고, **오늘 기준 완료된 구조 변경**도 함께 적는다.
 - 문서에 적힌 “남은 작업”은 실제 코드 기준으로 갱신되어야 한다.
 
+### H. OpenCode SDK / Server 참조 원칙
+
+- OpenCode SDK, server, session, message, provider, TUI, auth, permission, event stream을 변경하거나 문서화할 때는 `docs/opencode/server.mdx`와 `docs/opencode/sdk.mdx`를 먼저 연다.
+- `client.session.*`, `client.config.*`, `client.tui.*`, `opencode serve`, OpenAPI endpoint, SSE stream shape를 기억으로 추정하지 않는다.
+- 현재 OpenCode server API와 이 프로젝트가 계획 중인 control-plane `/v1/*` API를 분리해서 문서화한다.
+- OpenCode compatibility를 깨는 변경은 explicit migration/rollback plan 없이 진행하지 않는다.
+
 ---
 
 ## 섹션 미리보기

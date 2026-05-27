@@ -1,11 +1,13 @@
 /**
  * Agent Definitions Registry
  * 
- * Consolidated agent architecture (v2):
- * - Commander: Master orchestrator
+ * Current control-plane agent scaffolding:
+ * - Commander: current Master/Supervisor Agent equivalent
  * - Planner: Planning + Research
  * - Worker: Implementation + Documentation
  * - Reviewer: Verification + Context Management (Final Quality Gate)
+ *
+ * Additional worker-agent roles are planned in docs/SYSTEM_ARCHITECTURE.md.
  */
 
 import { AGENT_NAMES } from "../shared/agent/constants/index.js";

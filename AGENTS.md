@@ -27,6 +27,58 @@
 
 ---
 
+## 프로젝트 방향 (Project Direction)
+이 프로젝트의 이름은 Agent Supervisor입니다. 이 fork는 `opencode-orchestrator` 패키지명을 유지하면서 OpenCode 기반 다중 에이전트 control plane으로 전환 중입니다.
+
+목표 아키텍처:
+- 장기 실행 server-first control plane
+- Master/Supervisor Agent 중심의 작업 분해와 검토
+- OpenCode worker agent 세션/런타임 관리
+- API-first 제어면
+- Telegram을 첫 human action/notification 계층으로 사용
+- Prometheus metrics와 structured audit log 지원
+- provider-agnostic model routing
+- 위험 작업은 approval policy를 통해 처리하고 필요한 경우에만 Human Owner에게 escalation
+
+현재 완료로 주장하지 말아야 할 항목:
+- 독립 REST control-plane server
+- Telegram bot
+- Prometheus `/metrics` endpoint
+- persistent task database
+- provider registry / model router
+- policy engine / approval queue
+- audit log storage
+- worktree/container sandbox manager
+
+---
+
+## OpenCode SDK/Server 참조 규칙
+OpenCode SDK, server, session, message, provider, TUI, event, auth, permission 흐름을 수정하거나 문서화할 때는 반드시 로컬 참조 문서를 먼저 여십시오:
+
+- `docs/opencode/server.mdx`
+- `docs/opencode/sdk.mdx`
+
+규칙:
+- OpenCode API shape를 기억으로 추정하지 마십시오.
+- `client.session.*`, `client.config.*`, `client.tui.*`, event stream, `opencode serve` flag, OpenAPI endpoint는 `docs/opencode/*.mdx`로 검증하십시오.
+- 현재 OpenCode server endpoint와 이 프로젝트가 계획 중인 `/v1/*` control-plane endpoint를 혼동하지 마십시오.
+- OpenCode compatibility를 깨는 변경은 명시적 근거, 테스트, 롤백 계획 없이 수행하지 마십시오.
+
+---
+
+## 프로젝트 특화 규칙 (Project-Specific Rules)
+- MIT attribution과 원본 license notice를 보존하십시오.
+- 작은 변경을 선호하십시오.
+- 아키텍처, API, agent role, approval flow, provider routing이 바뀌면 문서를 함께 업데이트하십시오.
+- secret, token, provider key, Telegram chat ID, 배포 credential을 하드코딩하지 마십시오.
+- 새 API는 server-first, automation-first로 설계하십시오.
+- provider-specific 구현이 필요하더라도 public contract는 provider-agnostic으로 유지하십시오.
+- 사용자 문서에서는 `slave`를 쓰지 말고 `worker agent`를 사용하십시오.
+- 위험 작업은 직접 실행 대신 approval policy와 escalation chain을 통과하도록 설계하십시오.
+- 계획 단계 기능은 `planned`, `target architecture`, `roadmap`, `proposed endpoint` 같은 표현으로 표시하십시오.
+
+---
+
 ## 절대 금지 사항
 다음과 같은 행동은 절대 하지 마십시오:
 

@@ -19,4 +19,6 @@ package-lock.json
 
 # Korean internal docs (not for public)
 docs/OPENCODE.md
-.opencode/
+.opencode/*
+!.opencode/plugin/
+!.opencode/plugin/roadmap-lifecycle.ts

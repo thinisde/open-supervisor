@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Main configuration for OpenCode Orchestrator
+/// Main configuration for Agent Supervisor
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct OrchestratorConfig {

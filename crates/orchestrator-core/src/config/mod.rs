@@ -1,4 +1,4 @@
-//! Configuration handling for OpenCode Orchestrator
+//! Configuration handling for Agent Supervisor
 
 mod loader;
 mod schema;

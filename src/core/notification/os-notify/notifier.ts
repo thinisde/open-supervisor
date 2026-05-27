@@ -71,7 +71,7 @@ $RawXml = [xml] $Template.GetXml()
 $SerializedXml = New-Object Windows.Data.Xml.Dom.XmlDocument
 $SerializedXml.LoadXml($RawXml.OuterXml)
 $Toast = [Windows.UI.Notifications.ToastNotification]::new($SerializedXml)
-$Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('OpenCode Orchestrator')
+$Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Agent Supervisor')
 $Notifier.Show($Toast)
 `.trim().replace(/\n/g, "; ");
     await execAsync(`${ps} -Command "${script}" >NUL 2>NUL`);

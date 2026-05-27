@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Core logic for OpenCode Orchestrator - Agent management, hooks, and tools"
+description = "Core logic for OpenCode control-plane scaffolding, agent management, hooks, and tools"
 
 [dependencies]
 serde.workspace = true

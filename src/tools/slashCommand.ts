@@ -5,7 +5,10 @@ import { commander } from "../agents/commander.js";
 // ... (existing content logic)
 
 /**
- * Slash commands for OpenCode Orchestrator
+ * Slash commands for the current Agent Supervisor plugin runtime.
+ * Verify OpenCode SDK/server behavior against docs/opencode/*.mdx before
+ * changing command behavior that depends on session/message APIs.
+ *
  * - /task: Mission mode trigger with full Commander prompt
  * - /plan: Planning only
  * - /agents: Show architecture
@@ -63,19 +66,27 @@ export const COMMANDS: Record<string, { description: string; template: string; a
     argumentHint: '"complex task to plan"',
   },
   "agents": {
-    description: "Show the 4-agent architecture",
-    template: `## OpenCode Orchestrator - 4-Agent Architecture
+    description: "Show the current agent architecture and control-plane direction",
+    template: `## Agent Supervisor - Current Agent Runtime
 
 | Agent | Role | Capabilities |
 |-------|------|--------------|
-| **${AGENT_NAMES.COMMANDER}** | [MASTER] | Master Orchestrator: mission control, parallel coordination |
+| **${AGENT_NAMES.COMMANDER}** | [MASTER/SUPERVISOR] | Current control-plane coordinator: mission control, parallel coordination |
 | **${AGENT_NAMES.PLANNER}** | [STRATEGIST] | Planning, research, documentation analysis |
-| **${AGENT_NAMES.WORKER}** | [EXECUTOR] | Implementation, coding, terminal tasks |
+| **${AGENT_NAMES.WORKER}** | [WORKER AGENT] | Implementation, coding, terminal tasks |
 | **${AGENT_NAMES.REVIEWER}** | [VERIFIER] | Verification, testing, context sanity checks |
+
+## Target Control Plane Direction
+- Long-lived server-first control plane
+- REST API for task control
+- Telegram approval and notification layer
+- Provider/model routing per agent and task
+- Prometheus metrics and audit logs
+- Human escalation only for high-risk or ambiguous decisions
 
 ## Parallel Execution System
 \`\`\`
-Up to 50 Worker Sessions running simultaneously
+Worker sessions are OpenCode sessions managed by this plugin runtime
 Max 10 per agent type (auto-queues excess)
 Auto-timeout: 60 min | Auto-cleanup: 30 min
 \`\`\`
@@ -96,7 +107,11 @@ THINK → PLAN → DELEGATE → EXECUTE → VERIFY → COMPLETE
 ## Usage
 - Select **${AGENT_NAMES.COMMANDER}** and type your request
 - Or use \`/task "your mission"\` explicitly
-- ${AGENT_NAMES.COMMANDER} automatically coordinates all agents`,
+- ${AGENT_NAMES.COMMANDER} coordinates the currently implemented agents
+
+## OpenCode Reference
+- Verify SDK/server assumptions against \`docs/opencode/sdk.mdx\` and \`docs/opencode/server.mdx\`
+- Native OpenCode APIs are separate from the planned control-plane \`/v1/*\` API`,
   },
 };
 

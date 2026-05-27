@@ -1,545 +1,245 @@
 # System Architecture
 
 ## Overview
-OpenCode Orchestrator is a production-grade plugin for OpenCode that implements a **Multi-Agent Architecture** with advanced concurrency control, resource safety, and performance optimizations. The system transforms a single user prompt into a coordinated effort between Commander, Planner, Worker, and Reviewer agents.
 
-**Status**: Production Ready
+Agent Supervisor is being built from the current OpenCode plugin orchestrator into an OpenCode-native multi-agent control plane.
 
----
+The target architecture is a long-lived server that coordinates a hierarchy of AI agents, routes work through isolated OpenCode worker sessions, applies approval policy, selects models/providers per task, exposes API-first control surfaces, and escalates to the human owner only when necessary.
 
-## Core Architecture Layers
+**Status**: Early architecture and orchestration framework. The current repository implements an OpenCode plugin runtime and local multi-agent orchestration primitives. The server control plane, public REST API, Telegram bot, Prometheus endpoint, persistent task store, provider registry, model router, policy engine, and audit log are planned unless backed by current code.
 
-### Layer 1: Agent Management & Orchestration
-The central coordination layer that manages multi-agent workflows.
+## OpenCode Reference Sources
 
-#### 1.1 Parallel Agent Manager
-- **Role**: Central coordinator for agent session lifecycle
-- **Responsibilities**:
-  - Session creation via SessionPool (90% faster with reuse)
-  - Concurrency management via ConcurrencyController
-  - Task state transitions (PENDING → RUNNING → COMPLETED)
-  - Resource cleanup and shutdown coordination
-  - MSVP (Multi-Stage Verification Pipeline) triggering
+OpenCode SDK and server assumptions must be verified against the local reference docs before changing integration code or architecture docs:
 
-#### 1.2 Task Launcher
-- **Role**: Spawns and executes parallel tasks
-- **Features**:
-  - RAII pattern via ConcurrencyToken (zero resource leaks)
-  - Auto-retry with exponential backoff
-  - Agent system prompt injection
-  - Memory context injection
-  - Guaranteed cleanup via finally blocks
+- `docs/opencode/server.mdx`: `opencode serve`, server OpenAPI shape, sessions, messages, providers, TUI, auth, and SSE events
+- `docs/opencode/sdk.mdx`: `createOpencode`, `createOpencodeClient`, generated client methods, session APIs, provider APIs, TUI APIs, and event subscription
 
-#### 1.3 Task Poller
-- **Role**: Monitors task completion and progress
-- **Features**:
-  - Adaptive polling (500ms-5s based on load)
-  - Message count caching (avoids heavy fetches)
-  - Stability detection (3 stable polls required)
-  - Progress tracking (tool calls, last message)
+The current plugin uses the OpenCode plugin API and SDK/client shape. Future control-plane APIs should wrap or coordinate OpenCode server behavior rather than inventing incompatible session semantics.
 
-#### 1.4 Event Handler
-- **Role**: Real-time event processing
-- **Events**: `session.idle`, `session.deleted`, `message.updated`
-- **Features**: Immediate state transitions, completion detection
+## Target Hierarchy
 
----
-
-### Layer 2: Concurrency & Resource Management
-
-#### 2.1 ConcurrencyController
-Advanced concurrency control with auto-scaling and circuit breaker.
-
-**Features**:
-- **Priority Queues**: HIGH/NORMAL/LOW priority tasks
-- **Circuit Breaker**: Opens after 5 failures, 30s recovery window
-- **Auto-Scaling**:
-  - Scale up: +1 slot after 3 successes
-  - Scale down: -1 slot after 2 failures
-- **Resource Pressure Detection**: Rejects LOW priority when memory > 80%
-- **RAII Pattern**: ConcurrencyToken for guaranteed slot release
-
-**Default Limits**:
-- Commander: 1 (single orchestrator)
-- Planner: 10 (strategic planning)
-- Worker: 10 (parallel implementation)
-- Reviewer: 10 (verification)
-
-#### 2.2 Work-Stealing Queues
-Chase-Lev deque implementation for maximum CPU utilization.
-
-**Architecture**:
-```
-Worker 1: [Task A, Task B, Task C] ← pop (LIFO, cache locality)
-Worker 2: [Task D, Task E]         ← steal from Worker 1 (FIFO, fairness)
-Worker 3: [Task F]                 ← steal from Worker 1
+```text
+Human Owner
+  -> Control Plane Server
+  -> Master / Supervisor Agent
+  -> Agent Coordinator / Scheduler
+  -> Worker Agent Pool
+       -> Planner Agent
+       -> Coder Agent
+       -> Reviewer Agent
+       -> Debugger Agent
+       -> DevOps Agent
+       -> Research Agent
+       -> Security Agent
+  -> OpenCode Runtime Instances
+  -> Git Worktrees / Runtime Sandboxes
+  -> Repositories and External Systems
 ```
 
-**Configuration**:
-- Planner: 2 workers
-- Worker: 8 workers (high parallelism)
-- Reviewer: 4 workers
-- Commander: 1 worker
+## Current Runtime
 
-**Benefits**:
-- 90%+ CPU utilization (up from 50-70%)
-- Dynamic load balancing
-- Cache locality optimization
-- Fairness for thieves
+The implemented runtime is an OpenCode plugin entrypoint in `src/index.ts`.
 
-#### 2.3 Session Pool
-Reusable session pool to reduce creation overhead.
+Current components:
 
-**Strategy**:
-- Max 5 sessions per agent type
-- Max 10 reuses per session
-- 5-minute idle timeout
-- Health check every 60 seconds
-- Session compaction for context reset
+- Bun-based package scripts for local development, builds, tests, release helpers, and install-hook execution
+- Plugin hook registration for tools, config, events, chat messages, tool execution, assistant completion, session compaction, system transform, and shutdown
+- Config handler that registers `Commander`, `Planner`, `Worker`, and `Reviewer` agents with OpenCode
+- Slash command helpers for `/task`, `/plan`, and `/agents`
+- `ParallelAgentManager` as the current in-process task/session coordination facade
+- `TaskLauncher`, `TaskPoller`, `TaskResumer`, and `TaskCleaner` for worker session lifecycle
+- `SessionPool` for reusable OpenCode child sessions
+- `TaskStore` for in-memory task state and best-effort task archival
+- `ConcurrencyController` for per-agent/provider/model concurrency keys, priority queues, circuit breaker state, and resource-pressure checks
+- Toast and OS notification paths for current OpenCode/TUI feedback
+- `MetricsCollector` for local runtime counters and latency summaries
+- Rust CLI crates for performance-sensitive helper tools
 
-**Performance**:
-- Session creation: 90% faster (50ms vs 500ms)
-- Reduced OpenCode server load
-- Automatic invalidation of degraded sessions
+This current runtime is useful scaffolding for the future control plane, but it is not yet a standalone REST server.
 
----
+## Target Control Plane Server
 
-### Layer 3: Memory & Performance Optimizations
+The planned server should own task lifecycle and expose external control APIs. It should eventually manage:
 
-#### 3.1 Object Pool
-Generic object pooling for ParallelTask instances.
+- task submission and status tracking
+- agent session lifecycle
+- worker scheduling and queueing
+- provider/model registry and routing
+- approval queue and policy engine
+- logs, events, and audit trail
+- Telegram notifications and actions
+- optional WebSocket/SSE event streams
+- Prometheus-compatible metrics
+- persistent task state
+- runtime sandbox metadata
 
-**Configuration**:
-- Pool size: 200 instances
-- Prewarm: 50 instances
-- Hit rate: ~80%
+Proposed API surface:
 
-**Benefits**:
-- Zero GC for task objects
-- 60% memory reduction
-- Predictable allocation patterns
-
-#### 3.2 String Pool (Interning)
-Deduplication for frequently used strings.
-
-**Interned Strings**:
-- Agent names (commander, planner, worker, reviewer)
-- Task status (pending, running, completed, error)
-- Task modes (normal, race, fractal)
-
-**Benefits**:
-- Memory deduplication
-- Faster string comparison (pointer equality)
-- Reduced GC pressure
-
-#### 3.3 Buffer Pool
-Reusable ArrayBuffer pool for I/O operations.
-
-**Pool Sizes**:
-- 1KB, 4KB, 16KB, 64KB buffers
-- Multiple buffers per size
-
-**Benefits**:
-- Zero allocation for I/O
-- Reduced GC pressure
-
-#### 3.4 Rust Connection Pool
-Persistent Rust tool process pool.
-
-**Configuration**:
-- Max 4 processes
-- 30-second idle timeout
-- JSON-RPC protocol
-
-**Performance**:
-- First call: 50-100ms (spawn process)
-- Subsequent: 5-10ms (reuse connection) - **10x faster**
-
----
-
-### Layer 4: State Management & Synchronization
-
-#### 4.1 MVCC (Multi-Version Concurrency Control)
-Atomic TODO state synchronization with version control.
-
-**Mechanism**:
-```typescript
-// Read version
-const version = readVersion(); // e.g., 5
-
-// Modify TODO
-const newContent = modifyTodo(content);
-
-// Atomic write (CAS-like)
-if (currentVersion === version) {
-  writeFile(newContent);
-  writeVersion(version + 1);
-} else {
-  throw new ConflictError(); // Retry
-}
+```text
+POST   /v1/tasks
+GET    /v1/tasks/:id
+GET    /v1/tasks/:id/events
+POST   /v1/tasks/:id/approve
+POST   /v1/tasks/:id/reject
+GET    /v1/agents
+GET    /v1/providers
+GET    /metrics
 ```
 
-**Benefits**:
-- Zero data loss in parallel writes
-- Automatic conflict detection
-- Optimistic concurrency
+These are proposed control-plane endpoints, not current OpenCode server endpoints. For the OpenCode server's actual API shape, use `docs/opencode/server.mdx`.
 
-#### 4.2 Task Store
-In-memory task state management.
+## Agent Responsibilities
 
-**Features**:
-- Pending task tracking per parent session
-- Batched notifications
-- Automatic GC (cleanup after 30 minutes)
-- String interning for memory efficiency
+### Master / Supervisor Agent
 
-#### 4.3 WAL (Write-Ahead Log)
-Removed for performance (task recovery not critical).
+The Master Agent is the operational brain of the system. It is responsible for understanding incoming tasks, decomposing objectives, selecting worker agents, selecting models/providers, evaluating worker output, deciding whether low-risk approvals can be handled automatically, escalating high-risk or ambiguous decisions, retrying failed subtasks, and producing final reports.
 
----
+In the current codebase, the `Commander` agent is the closest implemented role to this target Master/Supervisor Agent.
 
-### Layer 5: Safety & Reliability
+### Agent Coordinator / Scheduler
 
-#### 5.1 Resource Safety
-RAII pattern ensures zero resource leaks.
+The coordinator should allocate worker sessions, enforce concurrency limits, prevent unsafe fan-out, track session status, and preserve parent/child task relationships.
 
-**Components**:
-- **ConcurrencyToken**: Guaranteed slot release
-- **ShutdownManager**: Priority-based cleanup (5s timeout per handler)
-- **File Watcher Cleanup**: TodoSyncService.stop()
-- **Listener Cleanup**: BackgroundTaskManager cleanup
-- **Finally Blocks**: All critical paths
+Current scaffolding exists in `ParallelAgentManager`, `TaskLauncher`, `TaskPoller`, `TaskStore`, `SessionPool`, and `ConcurrencyController`.
 
-**Guarantees**:
-- Zero file handle leaks
-- Zero event listener leaks
-- Zero concurrency slot leaks
-- Graceful shutdown
+### Worker Agents
 
-#### 5.2 Circuit Breaker
-Automatic recovery from API failures.
+Workers should run as isolated OpenCode instances or sessions with focused responsibility. The target worker pool includes Planner, Coder, Reviewer, Debugger, DevOps, Research, Security, Documentation, and Infrastructure roles.
 
-**States**:
-- CLOSED: Normal operation
-- OPEN: Blocking requests (after 5 failures)
-- HALF_OPEN: Testing recovery (2 successes to close)
+The current runtime implements Planner, Worker, and Reviewer subagents. Additional worker types are roadmap items.
 
-**Timeouts**:
-- Failure window: 30 seconds
-- Recovery test: 2 successful calls
+## Runtime Isolation
 
-#### 5.3 Auto-Recovery
-Automatic retry with exponential backoff.
+Each worker should ideally run in:
 
-**Strategy**:
-```typescript
-attempt 1: immediate
-attempt 2: 1s delay
-attempt 3: 2s delay
-attempt 4: 4s delay
-max: 5 attempts
+- a separate working directory
+- a separate git worktree
+- a separate task context
+- an optional container sandbox
+- a controlled permission scope
+
+The current implementation creates and tracks OpenCode sessions. Full worktree/container sandbox orchestration is planned.
+
+## Approval And Intervention Model
+
+The target system should route approvals through an escalation chain:
+
+```text
+Worker Agent
+  -> Master Agent
+  -> Policy Engine
+  -> Human Owner only if needed
 ```
 
-**Error Handling**:
-- Rate limits: Retry with delay
-- Network errors: Retry
-- Session errors: Abort
-- Parse errors: Skip after 2 attempts
+Low-risk actions should be eligible for automatic approval, including file reads, repository inspection, non-critical edits, test runs, formatters, summaries, and patch proposals.
 
-#### 5.4 Safe Installation
-Atomic config writes with automatic backup and rollback.
+Human escalation should be required for destructive shell commands, large deletions, secret modifications, production deployment, database migrations, billing/provider changes, force pushes, unclear architecture decisions, and high-cost model usage.
 
-**Process**:
-1. Create timestamped backup
-2. Read existing config
-3. Validate config structure
-4. Merge plugin (never overwrite)
-5. Write to temp file
-6. Atomic rename (OS-level atomic)
-7. Verify write succeeded
-8. Rollback from backup if failed
+The current plugin has safety hooks and runtime checks, but a complete policy engine and approval queue are planned.
 
-**Guarantees**:
-- Never overwrites existing config
-- All settings preserved
-- Automatic rollback on failure
-- Last 5 backups kept
+## Model And Provider Routing
 
----
+The control plane should be provider-agnostic and support per-agent model selection. Provider routing should consider task complexity, cost, latency, coding ability, reasoning ability, context length, privacy, availability, and fallback rules.
 
-### Layer 6: UI & Monitoring
+Potential providers include OpenAI, Anthropic, OpenRouter, Google Gemini, Groq, Mistral, Ollama/local models, and custom OpenAI-compatible endpoints.
 
-#### 6.1 Task Toast Manager
-Native TUI integration for user feedback.
+The current `ConcurrencyController` already has provider/model concurrency configuration fields. A complete provider registry and model router are planned.
 
-**Features**:
-- Task start/completion notifications
-- Real-time progress tracking
-- Concurrency wait-times
-- Mission success/failure summaries
+## API-First Control Panel
 
-**Protocol**:
-- Uses `client.tui.showToast` (protocol-safe)
-- Non-intrusive, dismissible toasts
-- Technical metrics display
+There is no web dashboard in the first target milestone.
 
-#### 6.2 Progress Notifier
-Aggregates and displays progress metrics.
+The intended control surfaces are:
 
-**Metrics**:
-- Active sessions count
-- Tool call counts
-- Task completion rate
-- Concurrency utilization
+- REST API first
+- optional WebSocket/SSE event streams
+- Telegram bot as the first interactive human control layer
+- CLI later
+- web dashboard later
 
-#### 6.3 Logging
-Structured logging to temp directory.
+The control panel should feel similar to cloud coding agent products: task queue, agent sessions, live logs, approval events, patch previews, final reports, model/provider selection, cost visibility, retry controls, and human escalation.
 
-**Log Files**:
-- `/tmp/opencode-orchestrator.log` (Unix)
-- `%TEMP%\opencode-orchestrator.log` (Windows)
+## Telegram Integration
 
-**Contents**:
-- Timestamps
-- Platform info
-- Operation logs
-- Error details
+Telegram is the planned first human-facing action surface. It should support task notifications, approval requests, reject/approve buttons, short status updates, final reports, error alerts, pause/resume/stop task actions, log previews, direct questions to the Master Agent, and escalation alerts.
 
----
+No Telegram bot is currently implemented in this repository.
 
-## Data Flow
+## Observability
 
-### 1. Task Initiation
-```
-User: /task "Implement feature X"
-  ↓
-ChatMessageHandler (detects /task)
-  ↓
-Commander Agent (analyzes task)
-  ↓
-Delegates to Planner
+The target control plane should expose structured logs, audit logs, and Prometheus-compatible metrics.
+
+Planned metrics:
+
+- `active_tasks`
+- `active_agents`
+- `queued_tasks`
+- `task_duration_seconds`
+- `agent_runtime_seconds`
+- `model_tokens_total`
+- `model_cost_estimated_total`
+- `approval_requests_total`
+- `human_escalations_total`
+- `task_failures_total`
+- `provider_errors_total`
+- `worker_restarts_total`
+
+The current repository has a local `MetricsCollector` and a metrics hook, but it does not expose a Prometheus `/metrics` endpoint yet.
+
+## Current Data Flow
+
+Current OpenCode plugin flow:
+
+```text
+OpenCode plugin loads
+  -> src/index.ts initializes hooks and managers
+  -> config handler registers agents and commands
+  -> user submits /task or Commander prompt
+  -> chat/system hooks inject mission context
+  -> Commander delegates work through task tools
+  -> ParallelAgentManager creates child sessions through OpenCode client
+  -> TaskPoller checks OpenCode session status and messages
+  -> Reviewer task may be launched for completed Worker tasks
+  -> notifications and progress state are updated
 ```
 
-### 2. Planning Phase
-```
-Planner Agent
-  ↓
-Research dependencies
-  ↓
-Create file-level TODO.md (MVCC write)
-  ↓
-Return to Commander
-```
+Target server flow:
 
-### 3. Execution Phase
-```
-Commander reads TODO.md
-  ↓
-TaskLauncher.launch() (batch)
-  ↓
-SessionPool.acquire() (reuse sessions)
-  ↓
-ConcurrencyController.acquireToken() (RAII)
-  ↓
-Fire prompts to Worker sessions
-  ↓
-Work-stealing queue distributes tasks
+```text
+API task submission
+  -> persistent task record
+  -> Master Agent plan
+  -> scheduler allocates worker sessions
+  -> workers execute in isolated OpenCode runtimes
+  -> approval requests route through policy
+  -> risky decisions escalate through Telegram
+  -> metrics, logs, and audit records are emitted
+  -> final report is returned through API and notification channels
 ```
 
-### 4. Monitoring Phase
-```
-TaskPoller (adaptive 500ms-5s)
-  ↓
-Check session.status (IDLE?)
-  ↓
-validateSessionHasOutput()
-  ↓
-Stability detection (3 stable polls)
-  ↓
-Mark COMPLETED
-```
+## Development Constraints
 
-### 5. Verification Phase
-```
-Worker completes
-  ↓
-MSVP trigger (Multi-Stage Verification Pipeline)
-  ↓
-Launch Reviewer (Unit Review)
-  ↓
-Verify tests pass
-  ↓
-Report to Commander
-```
+- Preserve OpenCode compatibility and verify SDK/server assumptions against `docs/opencode/*.mdx`.
+- Keep APIs server-first and provider-agnostic.
+- Use `worker agent`, not `slave`, in user-facing documentation.
+- Do not hardcode secrets or provider credentials.
+- Route risky actions through approval policy.
+- Preserve MIT attribution and original license notices.
+- Do not claim planned systems are complete without implementation and tests.
 
-### 6. Completion
-```
-All tasks COMPLETED
-  ↓
-Commander verifies TODO.md (all [x])
-  ↓
-Integration testing (optional)
-  ↓
-Mission COMPLETED
-```
+## Open Gaps
 
----
+- Standalone control-plane server
+- REST API implementation
+- SSE/WebSocket event stream for control-plane tasks
+- Telegram bot integration
+- Prometheus metrics endpoint
+- Persistent task state
+- Audit log storage
+- Provider registry and model router
+- Policy engine and approval queue
+- Worktree/container sandbox manager
+- Additional specialized worker roles
 
-## Performance Characteristics
-
-### Throughput
-- **Concurrent Sessions**: 50+ parallel sessions
-- **CPU Utilization**: 90%+ (work-stealing)
-- **Processing Speed**: 3-5x baseline
-
-### Latency
-- **Tool Calls**: 5-10ms (Rust connection pool)
-- **Session Creation**: 50ms (session pool)
-- **State Sync**: <1ms (MVCC atomic write)
-
-### Resource Usage
-- **Memory**: 40% of baseline (pooling)
-- **GC Pressure**: 20% of baseline (pooling)
-- **File Handles**: Zero leaks (RAII)
-
-### Reliability
-- **Sync Accuracy**: 99.95% (MVCC)
-- **Uptime**: 100% (graceful shutdown)
-- **Resource Leaks**: Zero (RAII + finally blocks)
-- **Config Safety**: 100% (atomic writes + rollback)
-
----
-
-## Technology Stack
-
-### Runtime
-- **Platform**: Node.js 18+
-- **Language**: TypeScript (strict mode)
-- **Build**: esbuild + tsc
-
-### Core Libraries
-- **Validation**: Zod (schema validation)
-- **IPC**: JSON-RPC (Rust communication)
-- **Concurrency**: Custom work-stealing implementation
-
-### Tools
-- **Rust CLI**: grep, glob, ast (via connection pool)
-- **LSP**: TypeScript, Python, Go (native tools)
-
-### Infrastructure
-- **Session Pool**: Custom implementation (5 per agent)
-- **Work-Stealing**: Chase-Lev deque
-- **Memory Pools**: Object, String, Buffer pools
-- **Circuit Breaker**: Custom implementation
-- **MVCC**: File-based versioning
-
----
-
-## Configuration
-
-### Agent Limits
-Configure via concurrency settings:
-```json
-{
-  "agentConcurrency": {
-    "commander": 1,
-    "planner": 10,
-    "worker": 10,
-    "reviewer": 10
-  }
-}
-```
-
-### Work-Stealing
-Enabled automatically for all agent types:
-- Planner: 2 workers
-- Worker: 8 workers
-- Reviewer: 4 workers
-- Commander: 1 worker
-
-### Session Pool
-- maxPoolSizePerAgent: 5
-- maxReuseCount: 10
-- idleTimeoutMs: 300000 (5 min)
-- healthCheckIntervalMs: 60000 (1 min)
-
-### Memory Pools
-- Task pool size: 200 (50 prewarmed)
-- Buffer pool sizes: [1KB, 4KB, 16KB, 64KB]
-- String interning: agent/status/mode
-
----
-
-## Security & Safety
-
-### Input Validation
-- **Zod Schemas**: All agent configs validated
-- **Type Safety**: Strict TypeScript compilation
-- **Sanitization**: Command injection prevention
-
-### Resource Limits
-- **Depth Guard**: Max task depth (prevent infinite recursion)
-- **Terminal Node Guard**: Workers/Reviewers cannot spawn sub-agents
-- **Timeout Guard**: 600s per session prompt
-- **Memory Guard**: Reject LOW priority when memory > 80%
-
-### Error Handling
-- **Circuit Breaker**: Automatic failure detection
-- **Auto-Recovery**: Exponential backoff retry
-- **Graceful Degradation**: Partial success handling
-- **Automatic Rollback**: Config write failures
-
----
-
-## Monitoring & Debugging
-
-### Logs
-- Location: `/tmp/opencode-orchestrator.log`
-- Format: `[timestamp] [component] message {data}`
-- Retention: Manual cleanup
-
-### Metrics
-- Active sessions
-- Concurrency utilization
-- Work-stealing stats
-- Circuit breaker state
-- Pool hit rates
-
-### Debug Mode
-Enable via environment variable:
-```bash
-DEBUG=opencode-orchestrator npm start
-```
-
----
-
-## Future Enhancements
-
-### Phase 4: Dependency Injection (Optional)
-- Constructor injection
-- Service registry
-- Event bus for decoupling
-
-### Phase 5: Distributed Scaling (Optional)
-- Redis for distributed task store
-- RPC for inter-process calls
-- Service discovery
-
-### Observability (Recommended)
-- Metrics endpoint
-- Prometheus integration
-- Grafana dashboards
-
----
-
-## Summary
-
-OpenCode Orchestrator is a **production-ready** multi-agent orchestration engine with:
-
-- ✅ **Zero Resource Leaks**: RAII pattern + graceful shutdown
-- ✅ **High Performance**: Work-stealing + memory pooling + session reuse
-- ✅ **Reliability**: MVCC + circuit breaker + auto-recovery
-- ✅ **Safety**: Atomic writes + auto-backup + rollback
-- ✅ **Scalability**: 50+ concurrent sessions with 90%+ CPU utilization
-
-**Grade**: A+ (Production Ready)
+Feature status is tracked in `docs/plans/ROADMAP.md`.

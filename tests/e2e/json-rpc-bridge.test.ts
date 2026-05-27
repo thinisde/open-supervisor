@@ -71,7 +71,7 @@ describe("JSON-RPC Bridge (Rust <-> TS)", () => {
         expect(response.id).toBe(1);
 
         // Verify logs on stderr
-        expect(res.stderr).toContain("OpenCode Orchestrator starting");
+        expect(res.stderr).toContain("Agent Supervisor starting");
 
         const text = response.result.content[0].text;
         expect(text).toContain("Commander");
